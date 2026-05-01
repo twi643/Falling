@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Falling</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background:url('pom.jpg') no-repeat center center fixed ;
+            background-size: contain;
+        }
+        .canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+<div class="canvas-container">
+    <canvas id="symbolCanvas"></canvas>
+</div>
+
+<script>
+    (function(){
+        const SYMBOLS = ['。', '，'];
+        let particles = [];
+        
+        const GRAVITY = 0.24;
+        const INITIAL_SPEED_Y = 0.68;
+        let springX, springY;
+        let canvasWidth, canvasHeight;
+        const canvas = document.getElementById('symbolCanvas');
+        let ctx = canvas.getContext('2d');
+        const FONT_STYLE = `28px 'PingFang SC Thin', 'Hiragino Sans GB', 'STKaiti', 'KaiTi', 'Microsoft YaHei Light', cursive`;
+        
+        let framesSince = 0;
+        let currentInterval = 16;
+        
+        function getRandInterval() {
+            return Math.floor(Math.random() * (22 - 10 + 1) + 10); 
+        }
+        
+        function resize() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            springX = canvasWidth  * 0.5;
+            springY = canvasHeight * 0.39;
+        }
+        
+        class Particle {
+            constructor(x, y, symbol, vy) {
+                this.x = x;
+                this.y = y;
+                this.symbol = symbol;
+                this.size = 30 + (canvasWidth / 90); 
+                if (this.size < 26) this.size = 28;
+                if (this.size > 52) this.size = 52;
+                this.vy = vy;
+            }
+            update() {
+                this.vy += GRAVITY;
+                this.y += this.vy;
+                if (this.y - this.size > canvasHeight + 60) return false;
+                if (this.y + this.size < -80) return false;
+                if (this.x + this.size/2 < -80 || this.x - this.size/2 > canvasWidth + 80) return false;
+                return true;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.font = `${this.size}px ${FONT_STYLE.split('px')[1]}`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#000000";
+                ctx.fillText(this.symbol, this.x, this.y);
+                ctx.restore();
+            }
+        }
+        
+        function spawn() {
+            if (particles.length > 2000) {
+                if (particles.length > 2300) particles.splice(0, 30);
+                else return;
+            }
+            const symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+            const speedVar = (Math.random() - 0.5) * 0.45;
+            let vy = INITIAL_SPEED_Y + speedVar;
+            if (vy < 0.45) vy = 0.48;
+            particles.push(new Particle(springX, springY, symbol, vy));
+        }
+        
+        function animate() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            if (framesSince >= currentInterval) {
+                spawn();
+                currentInterval = getRandInterval();
+                framesSince = 0;
+            } else {
+                framesSince++;
+            }
+            
+            for (let i = particles.length-1; i >= 0; i--) {
+                if (!particles[i].update()) {
+                    particles.splice(i,1);
+                }
+            }
+            for (let p of particles) {
+                p.draw(ctx);
+            }
+            requestAnimationFrame(animate);
+        }
+        
+        function init() {
+            resize();
+            framesSince = 4;
+            currentInterval = getRandInterval();
+            animate();
+            window.addEventListener('resize', () => {
+                resize();
+            });
+        }
+        init();
+    })();
+</script>
+<!-- 背景音乐 -->
+<audio id="bgMusic" loop preload="auto">
+    <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<!-- 音乐控制按钮 -->
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 999; background: rgba(0,0,0,0.7); padding: 10px 18px; border-radius: 40px; color: white; font-size: 14px; font-family: monospace; cursor: pointer; pointer-events: auto;" onclick="toggleMusic()">
+    播放音乐
+</div>
+
+<script>
+function toggleMusic() {
+    var music = document.getElementById('bgMusic');
+    if (music.paused) {
+        music.play().then(function() {
+            document.querySelector('div[onclick="toggleMusic()"]').innerHTML = '音乐播放中';
+        }).catch(function(e) {
+            alert('请点击右下角按钮播放音乐');
+        });
+    } else {
+        music.pause();
+        document.querySelector('div[onclick="toggleMusic()"]').innerHTML = '播放音乐';
+    }
+}
+</script>
+</body>
+</html>
